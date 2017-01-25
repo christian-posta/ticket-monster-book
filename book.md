@@ -2,7 +2,7 @@
 
 # Ticket Monster moves to microservices
 
-At the fictitious Ticket Monster company the VPs are looking for new ways to compete in an ever-increasing competative market of online ticket sales. They've been lamenting how long it takes to make changes to their bread and butter ticket-selling website and add new features including new channels for driving ticket sales. As we as consumers become ever more connected to online networks, more opportunity for selling/buying tickets has emerged. Over the past few years, it also became more and more expensive to sustain. They want to add new features like a waitlist for tickets that aren't currently available, a rewards program for those folks who buy a lot of tickets, a recommendation engine, personalized mobile app, social integration and much more. With such a large number of developers working on the project, the complexity, technical debt, and rigidity of the application architecture, it's been difficult to coordinate how best to add this new functionality. On top of it, deployments were tricky and often caused outages. 
+At the fictitious [JBoss Ticket Monster](http://www.jboss.org/ticket-monster/) company the VPs are looking for new ways to compete in an ever-increasing competative market of online ticket sales. They've been lamenting how long it takes to make changes to their bread and butter ticket-selling website and add new features including new channels for driving ticket sales. As we as consumers become ever more connected to online networks, more opportunity for selling/buying tickets has emerged. Over the past few years, it also became more and more expensive to sustain. They want to add new features like a waitlist for tickets that aren't currently available, a rewards program for those folks who buy a lot of tickets, a recommendation engine, personalized mobile app, social integration and much more. With such a large number of developers working on the project, the complexity, technical debt, and rigidity of the application architecture, it's been difficult to coordinate how best to add this new functionality. On top of it, deployments were tricky and often caused outages. 
 
 Ticket Broker, a new boutique startup is capturing mind share and market by integrating more closely with social platforms, offering new services through their mobile  and social TV apps, and Ticket Monster realizes they need to play catchup and at the same time harness digital innovation to compete going forward. They've decided that technology should become a core competency of their company and work much closer with the business to implement some of these new business initiatives. They're exploring things like cloud, devops and microservices, but with all of the buzz and confusion they're not quite sure what to believe and how to get started. They want to cautiously introduce technology where it fits and can benefit them. 
 
@@ -145,11 +145,38 @@ Let's look at the current model an the way entities are represented:
 I've opted to not show the media items and its relationships at the moment. We can get back to it.
 
 ## Phase I
-The teams agreed to start off the decomposition process by implementing a process based on an important first principle: We want to encourage changes to the system (otherwise how are we going to decompose!) so we need to have a safe way to deploy changes, test them, AND even more importantly, a way to rollback or undo a change. The teams decided that using Docker they can package their applications and configuration in a repeatable, consistent manner. With Docker, they can package all of their dependencies (including the JVM! remember, the JVM is a very important implementation detail of any application) and run them on their laptops as well as in dev/qa/production and remove some of the guessing about what's different across systems. No matter how much we try, how stringent our change process is, or what best-of-breed configuration automation, we always seem to end up with differences in the operating system, the app servers, and the databases. Docker helps ease that pain and helps us reason about a consistent software supply chain to deliver our applications. More on that in a bit. 
+
+For Phase I, the project's initial phase, we want to take the assumption that the application will not have any major changes and that everything will be kept in tact as-is including the code, APIs, application server and databases. What we want to focus on in the first phase is laying the ground work and achieving small wins. Doing this in small, iterative, batches will help the teams discover and focus on the important goals without getting too distracted. Recall those important goals for the first phase:
+ 
+ * simplify and streamline the management/deployment tools for deploying their application
+ * take better advantage of their existing hardware investments and contain costs
+ * develop/improve their methodologies for reducing deployment risk and time for issue recovery
+ * put themselves into position to use cloud providers (perhaps multiple different ones) for commodity server/storage/network and services
+ 
+The team decided to focus on these first principles to help guide them, and make any technology selections based firmly on how it aligns with these principles (with respect to the first phase, although positioning for the future phases is equally important)
+
+* enable delivery of small, incremental changes
+* enable safe, no-downtime deployments where possible
+* enable rollback of service changes w/ no-downtime where possible
+* minimize configuration drift between environments
+* automate as much of the deployment mechanisms as possible
+* enable service isolation and boundaries
+* plan for failure of parts of the system
+
+With the team agreeing to these first principles, they decided to implement Phase I, they'd choose to go in the direction of using Docker to help with these non-functional requirements. They wanted to focus on the concepts of immutable builds and immutable delivery.
+
+Immutable delivery concepts help to reason about the problems that were cropping up with their old build, release, and delivery model. With immutable delivery, the team will try to move the various moving pieces (app code, configuration, environment setup, application servers, JVM, JVM dependencies, etc) into pre-baked images as part of the build process. The teams at Ticket Monster  imagined as part of their build process they could output a fully baked image with the operating system, the intended version of the JVM, the application server, and all non-environment-specific configuration. They would then have more confidence when deploying into any environment, testing it, and migrating it along toward production without worrying about "whether the environment or application is configured consistently."  As part of immutability, the teams also had to wrap their head around needing to make changes: if they needed to make a change to their application, they would rebuild the entire image into a new version with this pipeline and deliver a new version of the application. 
+
+
+
+The teams decided that using Docker they can package their applications and configuration in a repeatable, consistent manner. With Docker, they can package all of their dependencies (including the JVM! remember, the JVM is a very important implementation detail of any application) and run them on their laptops as well as in dev/qa/production and remove some of the guessing about what's different across systems. No matter how much we try, how stringent our change process is, or what best-of-breed configuration automation, we always seem to end up with differences in the operating system, the app servers, and the databases. Docker helps ease that pain and helps us reason about a consistent software supply chain to deliver our applications. 
 
 The original Ticket Monster application is a Java EE war file with all of the layers packaged as a single deployable. It gets deployed into a WildFly 10/EAP 7 application server and has extra notes in the JIRA tickets to configure the database connections and so forth. Our first step is to codify all of this from the WAR to the WildFly server to the JVM and all of the JVM dependencies into a single Docker container. We will continue to run the database outside of the Docker environment to begin. Later we'll come back and see how a Docker environment can help our automation of managing and upgrading the database as well. 
 
 At first, the development team started by making their development environments (on their laptops) Docker capable. They also changed their shared Dev environment to match similarly to their laptops with Docker. They set up a Jenkins CI build to build their docker container and deploy into Dev when they had new versions. They did this as a first step to get their hands familiar with Docker and identify what type of software supply chain they would need (OS, Middleware, tooling, and eventually their code) as well as get familiar with immutable delivery principles.  But everything from QA on up to Prod was still the old way of doing things. They were off in the right direction, but still not there.
+
+
+As the teams become more familiar with Docker and packaging their application and the concepts of immutability they started to run into scaling challenges. 
 
 
 ### Deploying self contained in openshift
