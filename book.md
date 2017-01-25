@@ -64,19 +64,85 @@ Let's take a look at how all of this unfolded and look closely at the principles
 
 The main Ticket Monster application, and the scenarios which we'll explore, is centered on a traditional layered Java EE application with a single backing MySQL database. 
 
-IMAGE: insert graphic of what the current architecture looks like
+![layered architecture](images/layered-architecture.png)
 
 The app was written in 2005, and that's the approach we all took back then. The application source code was stored in a SVN repository that was eventually moved to git. The source code can be found here [https://github.com/christian-posta/ticket-monster](https://github.com/christian-posta/ticket-monster)
 
-The application uses Angular JS for the UI, JAX-RS for the backing REST services and JPA for implementing the data layers. Everything in between was built as Java code to glue the front ends to the data. All parts of the app are packaged as a single WAR file and deployed into a Java EE server (JBoss Wildfly/EAP). Please see the official [Ticket Monster website for a more thorough introduction](http://www.jboss.org/ticket-monster/introduction/). 
+The application uses Angular JS for the UI, JAX-RS for the backing REST services and JPA for implementing the data layers. Everything in-between was built as Java code to glue the front ends to the data. All parts of the app are packaged as a single WAR file and deployed into a Java EE server (JBoss Wildfly/EAP). Please see the official [Ticket Monster website for a more thorough introduction](http://www.jboss.org/ticket-monster/introduction/). 
 
 If you look at the main area of the Java source code you see a package structure like this:
 
+![java package structure](images/java-project-structure-on-github.png)
 
 
-### Deploying to OpenShift
+We'll come back to this in later sections, but these layers have proven to be part of the issue when trying to make changes to the app. We'll rely heavily on Domain Driven Design thinking and patterns to help overcome some of these issues. Before we do that, however, we want to understand the use cases that are intended to be solved with the current application and also suggest improvements to implement in the future.
+
+### Current use cases:
+
+#### Search and Booking
+The end users of the application want to attend some cool events. They will try to find shows, create bookings, or cancel bookings. The use cases are:
+
+* look for current events;
+* look for venues;
+* view, select shows (events taking place at specific venues) and choose a performance time;
+* book tickets;
+* view current bookings;
+* cancel bookings;
+
+#### Adminstrative
+Administrators are more concerned the operation of the business. They will manage the master data: information about venues, events and shows, and will want to see how many tickets have been sold. The use cases are:
+
+* add, remove and update events;
+* add, remove and update venues (including venue layouts);
+* add, remove and update shows and performances;
 
 
+#### Monitor / simulation 
+
+* monitor ticket sales for current shows and events
+* simulate load
+
+
+Features to think about adding:
+
+* Top priority shows
+* Search
+* User profiles
+* Wait List
+* Discounts (coupons, gift cards)
+* Loyalty
+* Payment processing
+* Analytics
+* Recommendations
+* Social (what are your friends doing)
+* Fraud detection
+
+
+Let's look at the current model an the way entities are represented:
+
+* `Event` - A model that represents a sport game, stand up routine, musical performance, lecture, etc. An event is described by its name and description. An event takes place at a `Venue` and is called a `Show`. A specific date/time combination of a `Show` is called a `Performance`. When users search, they may search for an `Event` and they end up getting tickets to a `Performance`
+* `Show` - an `Event` at a particular `Venue`
+* `Performance` - an date/time of a particular `Show`
+
+![Event Model](images/event-model.png)
+
+* `Venue` - A model element that represents a location (has an address) at which `Event`s can happen. Each `Venue` can have different layout, sections, and number of seats. 
+* `Section` - A grouping of seats in a particular `Venue`. A section can have different prices for its seats based on the Show and that's captured in `TicketPrice`
+
+![Venue Model](images/venue-model.png)
+
+* `TicketPrice` - a model capturing the price of a seat for a specific section for a specific show. Seat prices may be different depending on who sits there (adult, child) and is captured in `TicketCategory` TODO: expand on this and explain how this is probably a much more explicit domain element called "discount"
+
+![Ticket Price Model](images/ticketprice-model.png)
+
+* `Booking` - associates a set of `Ticket`s with a `Performance`
+
+![Ticket Price Model](images/booking-model.png)
+
+
+* `MediaItem` - an image or video attached to the `Event` or `Venue` TODO: expand on this; this seems like too many things crammed into a single model
+
+I've opted to not show the media items and its relationships at the moment. We can get back to it.
 
 ## Phase I
 The teams agreed to start off the decomposition process by implementing a process based on an important first principle: We want to encourage changes to the system (otherwise how are we going to decompose!) so we need to have a safe way to deploy changes, test them, AND even more importantly, a way to rollback or undo a change. The teams decided that using Docker they can package their applications and configuration in a repeatable, consistent manner. With Docker, they can package all of their dependencies (including the JVM! remember, the JVM is a very important implementation detail of any application) and run them on their laptops as well as in dev/qa/production and remove some of the guessing about what's different across systems. No matter how much we try, how stringent our change process is, or what best-of-breed configuration automation, we always seem to end up with differences in the operating system, the app servers, and the databases. Docker helps ease that pain and helps us reason about a consistent software supply chain to deliver our applications. More on that in a bit. 
