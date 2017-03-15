@@ -232,7 +232,7 @@ To do Jenkins Pipelines, add the Jenkinsfile to the root of the $PROJECT_ROOT/de
 oc new-build https://github.com/christian-posta/ticket-monster#monolith-master --strategy=pipeline --context-dir=demo --name=ticket-monster-pipeline
 ```
 
-> we need this to allow permissions: `oc policy add-role-to-user edit system:serviceaccount:ticketmonster-monolith:default`
+> we need this to allow permissions: `oc policy add-role-to-user edit system:serviceaccount:$(oc project -q):default`
 
 
 
