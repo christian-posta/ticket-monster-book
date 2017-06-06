@@ -182,11 +182,12 @@ As the teams become more familiar with Docker and packaging their application an
 ### Deploying self contained in openshift
  
 
-
-> mvn clean install
-> mkdir -p target/openshift/deployments
-> mv target/ticket-monster.war target/openshift/deployments/ROOT.war
-> cd target/openshift
+```
+mvn clean install
+mkdir -p target/openshift/deployments
+mv target/ticket-monster.war target/openshift/deployments/ROOT.war
+cd target/openshift
+```
 
 ```
 oc new-build --binary=true --strategy=source --image-stream=wildfly:10.0 --name=ticket-monster-full 
@@ -210,10 +211,12 @@ Now let's build the artifact w/ mysql as the backend in mind:
 
 First build the app with the mysql profile:
 
-> mvn clean install -Pmysql-openshift
-> mkdir -p target/openshift/deployments
-> mv target/ticket-monster.war target/openshift/deployments/ROOT.war
-> cd target/openshift
+```
+mvn clean install -Pmysql-openshift
+mkdir -p target/openshift/deployments
+mv target/ticket-monster.war target/openshift/deployments/ROOT.war
+cd target/openshift
+```
 
 
 ```
